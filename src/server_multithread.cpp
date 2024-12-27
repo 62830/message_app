@@ -117,10 +117,6 @@ int init_ssl(){
 }
 
 int main(int argc, char *argv[]){
-    if(argc != 2){
-        log_error("main", "Argument", "Usage: " + string(argv[0]) + " <port>");
-        return 1;
-    }
 	if(argc != 5){
 		log_error("main", "Argument", "Usage: " + string(argv[0]) + " <port> <db_path> <cert_path> <key_path>");
 		return 1;
