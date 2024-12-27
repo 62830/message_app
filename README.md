@@ -17,6 +17,7 @@ apt install nlohmann-json3-dev libavcodec-dev libavformat-dev libavutil-dev libs
 
 ```
 git clone git@github.com:62830/message_app.git
+cd message_app
 mkdir build
 make
 ```
