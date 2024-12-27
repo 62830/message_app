@@ -27,11 +27,11 @@ extern vector<user_session> user_sessions;
 extern SSL_CTX* ctx;
 
 ostream& operator<<(ostream& os, const user_session& us){
-    os << "user: " << us.user 
-        << ", client_fd: " << us.client_fd 
-        << ", type: " << us.type 
-        << ", client_num: " << us.client_num;
-    return os;
+	os << "user: " << us.user 
+		<< ", client_fd: " << us.client_fd 
+		<< ", type: " << us.type 
+		<< ", client_num: " << us.client_num;
+	return os;
 }
 
 json user_info_format_check(const json& j){
@@ -146,15 +146,15 @@ string meme_message(const vector<string>& users_same_pass){
 }
 
 void create_session(int client_fd, int type = 0, int client_num = -1, SSL* ssl = nullptr){
-    struct pollfd pfd;
-    pfd.fd = client_fd;
+	struct pollfd pfd;
+	pfd.fd = client_fd;
 	if(type == 0)
 		pfd.events = POLLIN;
 	else
 		pfd.events = 0;
-    user_session us;
-    us.client_fd = client_fd;
-    us.user = "";
+	user_session us;
+	us.client_fd = client_fd;
+	us.user = "";
 	us.type = type;
 	us.client_num = client_num;
 	us.client_ssl = ssl;
@@ -330,23 +330,23 @@ json user_logout(user_session& us){
 }
 
 void wake_up_poll(){
-    char c = 'a';
-    if(write(user_sessions[0].client_fd, &c, 1) < 0){
-        log_error("wake_up_poll", "Pipe", "write() failed");
-    }
+	char c = 'a';
+	if(write(user_sessions[0].client_fd, &c, 1) < 0){
+		log_error("wake_up_poll", "Pipe", "write() failed");
+	}
 }
 
 class AcceptTask : public Task{
-    public:
-        AcceptTask(pollfd &pfd, user_session& us) : pfd(pfd), us(us) {
+	public:
+		AcceptTask(pollfd &pfd, user_session& us) : pfd(pfd), us(us) {
 			pfd.events = 0;
-        }
-        void run(){
-            int client_fd = accept(pfd.fd, NULL, NULL);
-            if(client_fd < 0){
-                log_error("run", "AcceptTask", "accept() failed");
-                return;
-            }
+		}
+		void run(){
+			int client_fd = accept(pfd.fd, NULL, NULL);
+			if(client_fd < 0){
+				log_error("run", "AcceptTask", "accept() failed");
+				return;
+			}
 
 			SSL* ssl = SSL_new(ctx);
 			if(!ssl){
@@ -377,16 +377,16 @@ class AcceptTask : public Task{
 				cerr << "client_num: " << client_num << endl;
 				client_serial_num++;
 			}
-            create_session(client_fd, type, client_num, ssl);
-            cerr << "new client connected\n";
-        }
-        ~AcceptTask(){
-            pfd.events = POLLIN;
-            wake_up_poll();
-        }
-    private:
-        pollfd &pfd;
-        user_session& us;
+			create_session(client_fd, type, client_num, ssl);
+			cerr << "new client connected\n";
+		}
+		~AcceptTask(){
+			pfd.events = POLLIN;
+			wake_up_poll();
+		}
+	private:
+		pollfd &pfd;
+		user_session& us;
 };
 
 class ServerSendTask : public Task{
@@ -432,22 +432,22 @@ class ServerSendFileTask : public Task{
 
 json user_msg(const json& j, user_session& us){
 	string receiver;
-    try{
+	try{
 		cout << j.dump(4) << endl;
-        cout << j["msg"].get<string>() << endl;
+		cout << j["msg"].get<string>() << endl;
 		receiver = j["receiver"].get<string>();
 	}
-    catch(json::exception& e){
-        log_error("user_msg", "JSON", string("json error: ") + e.what());
-    }
-    catch(...){
-        log_error("user_msg", "JSON", "unknown error");
-    }
+	catch(json::exception& e){
+		log_error("user_msg", "JSON", string("json error: ") + e.what());
+	}
+	catch(...){
+		log_error("user_msg", "JSON", "unknown error");
+	}
 
 	// try to broadcast message to all users
-    json re;
-    re["status"] = "ok";
-    re["msg"] = "message received";
+	json re;
+	re["status"] = "ok";
+	re["msg"] = "message received";
 	for(size_t i = 2; i < user_sessions.size(); i++){
 		lock_guard<mutex> lock(m_user_session);
 		cerr << user_sessions[i] << endl;
@@ -458,7 +458,7 @@ json user_msg(const json& j, user_session& us){
 			tp.add_task(new ServerSendTask(pfds[i], user_sessions[i], j));
 		}
 	}
-    return re;
+	return re;
 }
 
 void user_file(const string file, user_session& us){
@@ -497,7 +497,7 @@ void zuoshi(string buf, user_session& us){
 	}
 	catch(json::parse_error& e){
 		log_error("zuoshi", "JSON", string("parse error: ") + e.what());
-        send_json(re, us.client_ssl);
+		send_json(re, us.client_ssl);
 		return;
 	}
 
@@ -523,11 +523,11 @@ void zuoshi(string buf, user_session& us){
 }
 
 class ServerTask : public Task{
-    public:
-        ServerTask(pollfd& pfd, user_session& us): pfd(pfd), us(us){
-            pfd.events = 0;
-        }
-        void run(){
+	public:
+		ServerTask(pollfd& pfd, user_session& us): pfd(pfd), us(us){
+			pfd.events = 0;
+		}
+		void run(){
 			int len = 0;
 			int n = SSL_read_all(us.client_ssl, &len, sizeof(len));
 			if(n <= 0 || n != sizeof(len)){
@@ -543,15 +543,15 @@ class ServerTask : public Task{
 				remove_session(pfd.fd);
 				return;
 			}
-            zuoshi(buf, us);
-        }
-        ~ServerTask(){
-            pfd.events = POLLIN;
-            wake_up_poll();
-        }
-    private:
-        pollfd &pfd;
-        user_session& us;
+			zuoshi(buf, us);
+		}
+		~ServerTask(){
+			pfd.events = POLLIN;
+			wake_up_poll();
+		}
+	private:
+		pollfd &pfd;
+		user_session& us;
 };
 
 

@@ -38,62 +38,62 @@ mutex m_user_session;// for pfds and user_sessions
 SSL_CTX* ctx;
 
 int init_server(int port){
-    int server_fd = socket(AF_INET, SOCK_STREAM, 0);
-    if(server_fd < 0){
-        log_error("init_server", "Socket", "socket() failed");
-        return -1;
-    }
-    struct sockaddr_in server_addr;
-    server_addr.sin_family = AF_INET;
-    server_addr.sin_addr.s_addr = INADDR_ANY;
-    server_addr.sin_port = htons(port);
-    int opt = 1;
-    // set server non blocking
-    if(fcntl(server_fd, F_SETFL, O_NONBLOCK) < 0){
-        log_error("init_server", "Socket", "fcntl() failed");
-        return -1;
-    }
-    if(setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0){
-        log_error("init_server", "Socket", "setsockopt() failed");
-        return -1;
-    }
-    if(bind(server_fd, (struct sockaddr*)&server_addr, sizeof(server_addr)) < 0){
-        log_error("init_server", "Socket", "bind() failed");
-        return -1;
-    }
-    if(listen(server_fd, 5) < 0){
-        log_error("init_server", "Socket", "listen() failed");
-        return -1;
-    }
+	int server_fd = socket(AF_INET, SOCK_STREAM, 0);
+	if(server_fd < 0){
+		log_error("init_server", "Socket", "socket() failed");
+		return -1;
+	}
+	struct sockaddr_in server_addr;
+	server_addr.sin_family = AF_INET;
+	server_addr.sin_addr.s_addr = INADDR_ANY;
+	server_addr.sin_port = htons(port);
+	int opt = 1;
+	// set server non blocking
+	if(fcntl(server_fd, F_SETFL, O_NONBLOCK) < 0){
+		log_error("init_server", "Socket", "fcntl() failed");
+		return -1;
+	}
+	if(setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0){
+		log_error("init_server", "Socket", "setsockopt() failed");
+		return -1;
+	}
+	if(bind(server_fd, (struct sockaddr*)&server_addr, sizeof(server_addr)) < 0){
+		log_error("init_server", "Socket", "bind() failed");
+		return -1;
+	}
+	if(listen(server_fd, 5) < 0){
+		log_error("init_server", "Socket", "listen() failed");
+		return -1;
+	}
 
-    struct sigaction sa;
-    sa.sa_handler = SIG_IGN;
-    sigaction(SIGPIPE, &sa, NULL);
+	struct sigaction sa;
+	sa.sa_handler = SIG_IGN;
+	sigaction(SIGPIPE, &sa, NULL);
 
-    user_sessions.reserve(3 * MAX_CLIENTS + 10);
-    pfds.reserve(3 * MAX_CLIENTS + 10);
+	user_sessions.reserve(3 * MAX_CLIENTS + 10);
+	pfds.reserve(3 * MAX_CLIENTS + 10);
 
-    // set cout to be unbuffered
-    cout.setf(ios::unitbuf);
-    create_session(server_fd);
+	// set cout to be unbuffered
+	cout.setf(ios::unitbuf);
+	create_session(server_fd);
 
-    // create a pipe to wake up poll() in case of new connection
-    int pipefd[2];
-    if(pipe(pipefd) < 0){
-        log_error("init_server", "Pipe", "pipe() failed");
-        return -1;
-    }
-    struct pollfd pfd;
-    pfd.fd = pipefd[0]; // read end
-    pfd.events = POLLIN;
-    pfds.push_back(pfd);
-    user_session us;
-    us.client_fd = pipefd[1];// write end
-    us.user = "";
-    user_sessions.push_back(us);
+	// create a pipe to wake up poll() in case of new connection
+	int pipefd[2];
+	if(pipe(pipefd) < 0){
+		log_error("init_server", "Pipe", "pipe() failed");
+		return -1;
+	}
+	struct pollfd pfd;
+	pfd.fd = pipefd[0]; // read end
+	pfd.events = POLLIN;
+	pfds.push_back(pfd);
+	user_session us;
+	us.client_fd = pipefd[1];// write end
+	us.user = "";
+	user_sessions.push_back(us);
 
 	
-    return server_fd;
+	return server_fd;
 }
 
 int init_ssl(){
@@ -129,29 +129,29 @@ int main(int argc, char *argv[]){
 		return 1;
 	}
 
-    int port = atoi(argv[1]);
-    int server_fd = init_server(port);
-    if (server_fd < 0) return 1;
+	int port = atoi(argv[1]);
+	int server_fd = init_server(port);
+	if (server_fd < 0) return 1;
 	if (init_ssl() < 0) return 1;
 
-    
-    while(true){
-        int ret = poll(pfds.data(), pfds.size(), -1);
-        if(ret < 0){
-            log_error("main", "Poll", "poll() failed");
-            break;
-        }
-        if(pfds[0].revents & POLLIN){
-            tp.add_task(new AcceptTask(pfds[0], user_sessions[0]));
-        }
-        if(pfds[1].revents & POLLIN){
-            char buf[1024];
-            read(pfds[1].fd, buf, 1024);
-        }
-        for(size_t i = 2; i < pfds.size(); i++){
-            if(pfds[i].revents & POLLIN){
-                tp.add_task(new ServerTask(pfds[i], user_sessions[i]));
-            }
-        }
-    }
+	
+	while(true){
+		int ret = poll(pfds.data(), pfds.size(), -1);
+		if(ret < 0){
+			log_error("main", "Poll", "poll() failed");
+			break;
+		}
+		if(pfds[0].revents & POLLIN){
+			tp.add_task(new AcceptTask(pfds[0], user_sessions[0]));
+		}
+		if(pfds[1].revents & POLLIN){
+			char buf[1024];
+			read(pfds[1].fd, buf, 1024);
+		}
+		for(size_t i = 2; i < pfds.size(); i++){
+			if(pfds[i].revents & POLLIN){
+				tp.add_task(new ServerTask(pfds[i], user_sessions[i]));
+			}
+		}
+	}
 }
